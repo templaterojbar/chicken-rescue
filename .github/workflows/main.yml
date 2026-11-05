@@ -3,33 +3,26 @@ name: github pages
 on:
   push:
     branches:
-      - main  
+      - main
   pull_request:
     branches:
-      - main  
+      - main
 
 permissions:
   contents: read
-  pages: write
-  id-token: write
 
 concurrency:
-  group: "pages"
+  group: "pages-${{ github.ref }}"
   cancel-in-progress: false
 
 jobs:
-  deploy:
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
+  build:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
         with:
-          submodules: true  
+          submodules: true
           fetch-depth: 0
-      - name: Setup Pages
-        uses: actions/configure-pages@v5
       - name: Setup Node.js environment
         uses: actions/setup-node@v6
       - name: Install project
@@ -40,6 +33,19 @@ jobs:
         uses: actions/upload-pages-artifact@v3
         with:
           path: "dist/"
+
+  # The github-pages environment only accepts main, so a pull request builds and stops here.
+  deploy:
+    needs: build
+    if: github.event_name == 'push'
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    runs-on: ubuntu-latest
+    steps:
       - name: Deploy to GitHub Pages
         id: deployment
         uses: actions/deploy-pages@v4
